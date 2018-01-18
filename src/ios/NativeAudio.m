@@ -29,23 +29,17 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
 {
     self.fadeMusic = NO;
 
-    AudioSessionInitialize(NULL, NULL, nil , nil);
-    AVAudioSession *session = [AVAudioSession sharedInstance];
     // we activate the audio session after the options to mix with others is set
-    [session setActive: NO error: nil];
     NSError *setCategoryError = nil;
 
     // Allows the application to mix its audio with audio from other apps.
-    if (![session setCategory:AVAudioSessionCategoryAmbient
+    if (![[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
                   withOptions:AVAudioSessionCategoryOptionMixWithOthers
                         error:&setCategoryError]) {
 
         NSLog (@"Error setting audio session category.");
         return;
     }
-
-    [session setActive: YES error: nil];
-    [session setCategory:AVAudioSessionCategoryPlayback error:nil];
 }
 
 - (void) parseOptions:(NSDictionary*) options
@@ -69,7 +63,6 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
 
 - (void) preloadSimple:(CDVInvokedUrlCommand *)command
 {
-
     NSString *callbackId = command.callbackId;
     NSArray* arguments = command.arguments;
     NSString *audioID = [arguments objectAtIndex:0];
@@ -82,6 +75,15 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSNumber* existingReference = audioMapping[audioID];
 
     [self.commandDelegate runInBackground:^{
+        [[AVAudioSession sharedInstance] setActive:NO error:nil];
+        NSError *setCategoryError = nil;
+        if (![[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
+                      withOptions:AVAudioSessionCategoryOptionMixWithOthers
+                            error:&setCategoryError]) {
+
+            NSLog (@"Error setting audio session category.");
+            return;
+        }
         if (existingReference == nil) {
 
             NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
@@ -167,6 +169,15 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSNumber* existingReference = audioMapping[audioID];
 
     [self.commandDelegate runInBackground:^{
+        NSError *setCategoryError = nil;
+        [[AVAudioSession sharedInstance] setActive:NO error:nil];
+        if (![[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
+                      withOptions:AVAudioSessionCategoryOptionDuckOthers
+                            error:&setCategoryError]) {
+
+            NSLog (@"Error setting audio session category.");
+            return;
+        }
         if (existingReference == nil) {
             NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
             NSString* path = [NSString stringWithFormat:@"%@/%@", basePath, assetPath];
@@ -202,6 +213,7 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSString *audioID = [arguments objectAtIndex:0];
 
     [self.commandDelegate runInBackground:^{
+
         if (audioMapping) {
 
             NSObject* asset = audioMapping[audioID];
