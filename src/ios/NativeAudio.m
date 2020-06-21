@@ -28,18 +28,6 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
 - (void)pluginInitialize
 {
     self.fadeMusic = NO;
-
-    // we activate the audio session after the options to mix with others is set
-    NSError *setCategoryError = nil;
-
-    // Allows the application to mix its audio with audio from other apps.
-    if (![[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
-                  withOptions:AVAudioSessionCategoryOptionMixWithOthers
-                        error:&setCategoryError]) {
-
-        NSLog (@"Error setting audio session category.");
-        return;
-    }
 }
 
 - (void) parseOptions:(NSDictionary*) options
@@ -63,6 +51,7 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
 
 - (void) preloadSimple:(CDVInvokedUrlCommand *)command
 {
+
     NSString *callbackId = command.callbackId;
     NSArray* arguments = command.arguments;
     NSString *audioID = [arguments objectAtIndex:0];
@@ -75,15 +64,6 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSNumber* existingReference = audioMapping[audioID];
 
     [self.commandDelegate runInBackground:^{
-        [[AVAudioSession sharedInstance] setActive:NO error:nil];
-        NSError *setCategoryError = nil;
-        if (![[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
-                      withOptions:AVAudioSessionCategoryOptionMixWithOthers
-                            error:&setCategoryError]) {
-
-            NSLog (@"Error setting audio session category.");
-            return;
-        }
         if (existingReference == nil) {
 
             NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
@@ -169,15 +149,6 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSNumber* existingReference = audioMapping[audioID];
 
     [self.commandDelegate runInBackground:^{
-        NSError *setCategoryError = nil;
-        [[AVAudioSession sharedInstance] setActive:NO error:nil];
-        if (![[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback
-                      withOptions:AVAudioSessionCategoryOptionDuckOthers
-                            error:&setCategoryError]) {
-
-            NSLog (@"Error setting audio session category.");
-            return;
-        }
         if (existingReference == nil) {
             NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
             NSString* path = [NSString stringWithFormat:@"%@/%@", basePath, assetPath];
@@ -213,14 +184,45 @@ NSString* INFO_VOLUME_CHANGED = @"(NATIVE AUDIO) Volume changed.";
     NSString *audioID = [arguments objectAtIndex:0];
 
     [self.commandDelegate runInBackground:^{
-
-        if (audioMapping) {
+       if (audioMapping) {
 
             NSObject* asset = audioMapping[audioID];
 
             if (asset != nil){
+                AVAudioSession *session = [AVAudioSession sharedInstance];
+                NSError *setCategoryError = nil;
+                NSLog(@"audioID1 == %@",audioID);
+                if (![audioID hasSuffix:@"Background"]){
+                  [session setActive: NO error: nil];  
+                }
+                NSLog(@"audioID3 == %@",audioID);
+                // Allows the application to mix its audio with audio from other apps.
+                if ([audioID isEqualToString:@"blankBackground"] || [audioID isEqualToString:@"blankForeground"]){
+                  NSLog(@"audioID4 == %@",audioID);
+                  if (![session setCategory:AVAudioSessionCategoryPlayback
+                                withOptions:AVAudioSessionCategoryOptionMixWithOthers
+                                      error:&setCategoryError]) {
+  
+                      NSLog (@"Error setting audio session category.");
+                      return;
+                  }                
+                } else {
+                  NSLog(@"audioID5 == %@",audioID);
+                  if (![session setCategory:AVAudioSessionCategoryPlayback
+                                  withOptions:AVAudioSessionCategoryOptionDuckOthers
+                                        error:&setCategoryError]) {
+    
+                        NSLog (@"Error setting audio session category.");
+                        return;
+                  }        
+                }
+                NSLog(@"audioID5 == %@",audioID);  
+                [session setActive: YES error: nil];
+                NSLog(@"audioID7 == %@",audioID);  
+
+
                 if ([asset isKindOfClass:[NativeAudioAsset class]]) {
-                    NativeAudioAsset *_asset = (NativeAudioAsset*) asset;
+                  NativeAudioAsset *_asset = (NativeAudioAsset*) asset;
 
                     if(self.fadeMusic) {
                         // Music assets are faded in
